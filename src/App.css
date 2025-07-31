@@ -1,0 +1,290 @@
+/* App.css */
+.App {
+  text-align: left;
+}
+
+/* Custom scrollbar for sidebar */
+.ant-layout-sider::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Custom card shadows */
+.ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Custom button styles */
+.ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(39, 64, 139, 0.2);
+}
+
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 8px rgba(39, 64, 139, 0.3);
+}
+
+/* Custom table styles */
+.ant-table-thead > tr > th {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+  font-weight: 600;
+  color: #27408b;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    margin: 12px;
+    padding: 16px;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-col {
+    margin-bottom: 16px;
+  }
+}
+
+/* Loading spinner customization */
+.ant-spin-dot-item {
+  background-color: #27408b;
+}
+
+/* Custom notification styles */
+.ant-notification {
+  border-radius: 8px;
+}
+
+.ant-notification-notice {
+  border-radius: 8px;
+}
+
+/* Badge customization */
+.ant-badge-count {
+  background: #ff4d4f;
+  color: #fff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* Form improvements */
+.ant-form-item-label > label {
+  font-weight: 600;
+  color: #27408b;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: #3a5fcd;
+  box-shadow: 0 0 0 2px rgba(58, 95, 205, 0.2);
+}
+
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.ant-select-focused .ant-select-selector {
+  border-color: #3a5fcd;
+  box-shadow: 0 0 0 2px rgba(58, 95, 205, 0.2);
+}
+
+/* Custom gradient backgrounds */
+.gradient-card-1 {
+  background: linear-gradient(135deg, #27408b 0%, #3a5fcd 100%);
+}
+
+.gradient-card-2 {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+
+.gradient-card-3 {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+}
+
+.gradient-card-4 {
+  background: linear-gradient(135deg, #36648b 0%, #4a708b 100%);
+}
+
+.gradient-card-5 {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Status indicators */
+.status-completed {
+  color: #52c41a;
+}
+
+.status-pending {
+  color: #faad14;
+}
+
+.status-rejected {
+  color: #ff4d4f;
+}
+
+/* Custom dividers */
+.section-divider {
+  margin: 32px 0;
+  border-color: #e9ecef;
+}
+
+/* Help button pulse effect */
+.help-button-notification {
+  position: relative;
+}
+
+.help-button-notification::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ff4d4f;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(255, 77, 79, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
+  }
+}
+
+/* ===== SIDEBAR TRIGGER CUSTOMIZATION ===== */
+/* Default Ant Design trigger'ını gizle */
+.ant-layout-sider-trigger {
+  display: none !important;
+}
+
+/* Custom trigger görünürlük ayarları */
+.custom-collapse-trigger {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+/* ===== CUSTOM MENU STYLES ===== */
+/* Menu item büyültme ve aralık artırma */
+.custom-menu .ant-menu-item {
+  height: 48px !important;
+  line-height: 48px !important;
+  margin: 6px 0 !important;
+  font-size: 15px !important;
+  border-radius: 8px !important;
+  padding-left: 24px !important;
+}
+
+.custom-menu .ant-menu-item-icon {
+  font-size: 16px !important;
+  margin-right: 12px !important;
+}
+
+.custom-menu .ant-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.custom-menu .ant-menu-item-selected {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Help message slideDown animasyonu */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 300px;
+  }
+}
+
+.help-message-area {
+  animation: slideDown 0.3s ease-out;
+  overflow: hidden;
+}
+
+/* Help message textarea styling */
+.help-message-area .ant-input {
+  background: #374151 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+}
+
+.help-message-area .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.help-message-area .ant-input:focus {
+  border-color: #FBBF24 !important;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2) !important;
+}
