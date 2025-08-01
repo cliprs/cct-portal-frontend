@@ -23,16 +23,6 @@ interface AuthState {
   error: string | null;
 }
 
-// 🔧 Gerçek authentication için boş initial state
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  loading: false,
-  error: null,
-};
-
-// 🔧 localStorage'dan token kontrol et
 const checkStoredAuth = (): Partial<AuthState> => {
   try {
     const storedToken = localStorage.getItem('accessToken');
@@ -52,15 +42,18 @@ const checkStoredAuth = (): Partial<AuthState> => {
   return {};
 };
 
-// Apply stored auth to initial state
-const finalInitialState: AuthState = {
-  ...initialState,
+const initialState: AuthState = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
   ...checkStoredAuth()
 };
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: finalInitialState,
+  initialState,
   reducers: {
     loginStart: (state) => {
       state.loading = true;
@@ -73,7 +66,6 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.error = null;
       
-      // 🔧 localStorage'a da kaydet
       localStorage.setItem('user', JSON.stringify(action.payload.user));
       localStorage.setItem('accessToken', action.payload.token);
     },
@@ -84,7 +76,6 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       
-      // 🔧 localStorage'ı temizle
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -96,7 +87,6 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
       
-      // 🔧 localStorage'ı temizle
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -104,14 +94,12 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    // 🔧 User profile güncellemesi için
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
         localStorage.setItem('user', JSON.stringify(state.user));
       }
     },
-    // 🔧 Token yenileme için
     refreshToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
       localStorage.setItem('accessToken', action.payload);

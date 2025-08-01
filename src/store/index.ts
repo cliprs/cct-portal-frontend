@@ -1,6 +1,7 @@
 import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import kycReducer from './slices/kycSlice';
+import authReducer from './slices/authSlice'; // 🔧 Real authSlice import
 
 // User slice
 const userSlice = createSlice({
@@ -47,24 +48,6 @@ const userSlice = createSlice({
       };
     }
   }
-});
-
-// Auth slice
-const authSlice = createSlice({
-  name: 'auth',
-  initialState: {
-    user: {
-      id: 'user123',
-      email: 'john.doe@example.com',
-      firstName: 'John',
-      lastName: 'Doe'
-    },
-    token: 'mock-token',
-    isAuthenticated: true,
-    loading: false,
-    error: null as string | null
-  },
-  reducers: {}
 });
 
 // ✅ Enhanced Accounts Slice with Full Functionality
@@ -152,15 +135,15 @@ const notificationsSlice = createSlice({
   reducers: {}
 });
 
-// Store configuration with KYC slice added
+// 🔧 Store configuration with REAL authSlice
 export const store = configureStore({
   reducer: {
-    auth: authSlice.reducer,
+    auth: authReducer, // 🔧 Real auth reducer from authSlice.ts
     user: userSlice.reducer,
     accounts: accountsSlice.reducer,
     transactions: transactionsSlice.reducer,
     notifications: notificationsSlice.reducer,
-    kyc: kycReducer, // ✅ KYC slice eklendi
+    kyc: kycReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
