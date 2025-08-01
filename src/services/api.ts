@@ -28,15 +28,18 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    // 🔧 Production URL prioritesi
-    const productionURL = 'https://aware-enjoyment-production.up.railway.app/api';
-    const developmentURL = 'http://localhost:3001/api';
+    // 🔧 Runtime'da environment variable mevcut değil, kesin URL kullan
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
     
-    // Environment variable varsa onu kullan, yoksa production URL kullan
-    this.baseURL = process.env.REACT_APP_API_URL || 
-                   (window.location.hostname === 'localhost' ? developmentURL : productionURL);
+    // Kesin production URL - environment variable güvenilmez
+    this.baseURL = isLocalhost 
+      ? 'http://localhost:3001/api'
+      : 'https://aware-enjoyment-production.up.railway.app/api';
     
-    console.log('🌐 API Base URL:', this.baseURL); // Debug için
+    console.log('🌐 API Base URL (Runtime):', this.baseURL);
+    console.log('🔍 Is Localhost:', isLocalhost);
+    console.log('🔍 Hostname:', window.location.hostname);
     
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -48,6 +51,7 @@ class ApiService {
 
     this.setupInterceptors();
   }
+
   private setupInterceptors() {
     // Request interceptor - Add auth token
     this.api.interceptors.request.use(
