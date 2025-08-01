@@ -92,7 +92,11 @@ const Register: React.FC = () => {
       let errorMessage = 'Registration failed. Please try again.';
       
       if (error.status === 400) {
-        errorMessage = 'Invalid input data. Please check all fields.';
+        if (error.message?.includes('Password does not meet requirements') || error.error === 'WEAK_PASSWORD') {
+          errorMessage = 'Password must be at least 8 characters with uppercase, lowercase, number and special character (@$!%*?&)';
+        } else {
+          errorMessage = 'Invalid input data. Please check all fields.';
+        }
       } else if (error.status === 500) {
         errorMessage = 'Server error. Please try again later.';
       } else if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
@@ -250,14 +254,14 @@ const Register: React.FC = () => {
               { required: true, message: 'Please enter your password' },
               { min: 8, message: 'Password must be at least 8 characters' },
               { 
-                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                message: 'Password must contain uppercase, lowercase, and number'
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+                message: 'Password must contain uppercase, lowercase, number and special character (@$!%*?&)'
               }
             ]}
           >
             <Input.Password 
               prefix={<LockOutlined />}
-              placeholder="Create a password"
+              placeholder="Create a strong password (min 8 chars, A-z, 0-9, @$!%*?&)"
               autoComplete="new-password"
             />
           </Form.Item>
