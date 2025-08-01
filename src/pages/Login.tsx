@@ -1,0 +1,227 @@
+// src/pages/Login.tsx
+import React, { useState } from 'react';
+import { Form, Input, Button, Card, Typography, Alert, Space, Divider } from 'antd';
+import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppDispatch } from '../store';
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
+import { apiService } from '../services/api';
+
+const { Title, Text } = Typography;
+
+interface LoginForm {
+  email: string;
+  password: string;
+}
+
+const Login: React.FC = () => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const onFinish = async (values: LoginForm) => {
+    try {
+      setLoading(true);
+      setError(null);
+      dispatch(loginStart());
+
+      console.log('🔐 Attempting login:', values.email);
+
+      const response = await apiService.post('/auth/login', {
+        email: values.email,
+        password: values.password,
+      });
+
+      if (response.success && response.data) {
+        // Debug: Log response structure
+        console.log('🔍 Login response:', response.data);
+        
+        // Type assertion for backend response
+        const authData = response.data as any;
+        
+        // Save tokens to localStorage (check if exists)
+        if (authData.accessToken) {
+          localStorage.setItem('accessToken', authData.accessToken);
+        }
+        if (authData.refreshToken) {
+          localStorage.setItem('refreshToken', authData.refreshToken);
+        }
+
+        // Update Redux store with fallback data
+        dispatch(loginSuccess({
+          user: authData.user || {
+            id: 'user123',
+            email: values.email,
+            firstName: 'User',
+            lastName: 'Name'
+          },
+          token: authData.accessToken || 'mock-token'
+        }));
+
+        console.log('✅ Login successful, redirecting...');
+        
+        // Redirect to dashboard
+        navigate('/dashboard');
+        
+        // Reload to ensure fresh state
+        window.location.reload();
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      const errorMessage = error.message || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      dispatch(loginFailure(errorMessage));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <Card 
+        style={{ 
+          width: '400px',
+          maxWidth: '90vw',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          borderRadius: '12px',
+          border: 'none'
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: '#27408b',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 'bold'
+          }}>
+            CCT
+          </div>
+          <Title level={2} style={{ margin: 0, color: '#27408b' }}>
+            Welcome Back
+          </Title>
+          <Text type="secondary">
+            Sign in to your CCT Portal account
+          </Text>
+        </div>
+
+        {error && (
+          <Alert
+            message="Login Failed"
+            description={error}
+            type="error"
+            showIcon
+            style={{ marginBottom: '24px' }}
+            closable
+            onClose={() => setError(null)}
+          />
+        )}
+
+        <Form
+          form={form}
+          name="login"
+          onFinish={onFinish}
+          layout="vertical"
+          size="large"
+        >
+          <Form.Item
+            name="email"
+            label="Email Address"
+            rules={[
+              { required: true, message: 'Please enter your email' },
+              { type: 'email', message: 'Please enter a valid email' }
+            ]}
+          >
+            <Input 
+              prefix={<MailOutlined />}
+              placeholder="Enter your email"
+              autoComplete="email"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="password"
+            label="Password"
+            rules={[
+              { required: true, message: 'Please enter your password' },
+              { min: 6, message: 'Password must be at least 6 characters' }
+            ]}
+          >
+            <Input.Password 
+              prefix={<LockOutlined />}
+              placeholder="Enter your password"
+              autoComplete="current-password"
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: '16px' }}>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={loading}
+              block
+              style={{ 
+                height: '48px',
+                borderRadius: '8px',
+                background: '#27408b',
+                borderColor: '#27408b'
+              }}
+            >
+              {loading ? 'Signing In...' : 'Sign In'}
+            </Button>
+          </Form.Item>
+        </Form>
+
+        <Divider style={{ margin: '24px 0' }}>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            OR
+          </Text>
+        </Divider>
+
+        <div style={{ textAlign: 'center' }}>
+          <Space direction="vertical" size="small">
+            <Text type="secondary">
+              Don't have an account?{' '}
+              <Link to="/register" style={{ color: '#27408b', fontWeight: '500' }}>
+                Create Account
+              </Link>
+            </Text>
+          </Space>
+        </div>
+
+        <div style={{ 
+          marginTop: '32px', 
+          padding: '16px', 
+          background: '#f8f9fa', 
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            <strong>Demo Credentials:</strong><br />
+            Email: test@example.com<br />
+            Password: Test123!
+          </Text>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default Login;

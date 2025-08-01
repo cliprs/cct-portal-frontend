@@ -12,6 +12,8 @@ import Withdraw from './pages/Withdraw';
 import Transfer from './pages/Transfer';
 import History from './pages/History';
 import KYCUpload from './pages/KYC/KYCUpload';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import './App.css';
 
 // Ant Design theme configuration
@@ -50,6 +52,12 @@ const App: React.FC = () => {
             <div className="App">
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                
+                {/* Auth Routes - MainLayout dışında */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Protected Routes - MainLayout içinde */}
                 <Route
                   path="/*"
                   element={
