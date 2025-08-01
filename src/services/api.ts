@@ -146,13 +146,17 @@ class ApiService {
   }
 
   private handleAuthFailure() {
-    // Clear tokens
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    
-    // Redirect to login
-    window.location.href = '/login';
-  }
+  // Clear tokens
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  
+  // 🔧 Debug için redirect'i kapatıyoruz
+  console.log('🚨 Auth failure detected - tokens cleared');
+  console.log('Would redirect to login, but disabled for debug');
+  
+  // Redirect to login
+  // window.location.href = '/login'; // ← Bu satırı comment edin
+}
 
   // Generic HTTP methods
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
