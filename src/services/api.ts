@@ -28,7 +28,15 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+    // 🔧 Production URL prioritesi
+    const productionURL = 'https://aware-enjoyment-production.up.railway.app/api';
+    const developmentURL = 'http://localhost:3001/api';
+    
+    // Environment variable varsa onu kullan, yoksa production URL kullan
+    this.baseURL = process.env.REACT_APP_API_URL || 
+                   (window.location.hostname === 'localhost' ? developmentURL : productionURL);
+    
+    console.log('🌐 API Base URL:', this.baseURL); // Debug için
     
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -40,7 +48,6 @@ class ApiService {
 
     this.setupInterceptors();
   }
-
   private setupInterceptors() {
     // Request interceptor - Add auth token
     this.api.interceptors.request.use(
