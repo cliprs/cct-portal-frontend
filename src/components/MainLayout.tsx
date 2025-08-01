@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Button, Badge, Avatar, Dropdown, Typography, Space, Divider, Input, message } from 'antd';
 import {
   DashboardOutlined,
@@ -16,6 +16,9 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '../store';
+import { logout, updateUser } from '../store/slices/authSlice';
+import { apiService } from '../services/api';
 import type { MenuProps } from 'antd';
 
 const { Header, Sider, Content } = Layout;
@@ -29,8 +32,46 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [helpMessageVisible, setHelpMessageVisible] = useState(false);
+  const [helpMessage, setHelpMessage] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  
+  // 🔧 Redux'dan real user bilgisi al
+  const { user, isAuthenticated, token } = useAppSelector((state) => state.auth);
+
+  // 🔧 User profile fetch
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        // localStorage'dan user bilgisi al
+        const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('accessToken');
+        
+        if (storedToken && !user && !storedUser) {
+          // API'den user bilgisini çek
+          const response = await apiService.get('/auth/profile');
+          if (response.success && response.data) {
+            dispatch(updateUser(response.data));
+          }
+        } else if (storedUser && !user) {
+          // localStorage'dan user bilgisini Redux'a yükle
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            dispatch(updateUser(parsedUser));
+          } catch (error) {
+            console.warn('Failed to parse stored user data:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+
+    if (token || localStorage.getItem('accessToken')) {
+      fetchUserProfile();
+    }
+  }, [token, user, dispatch]);
 
   const menuItems = [
     {
@@ -78,13 +119,54 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setHelpMessageVisible(!helpMessageVisible);
   };
 
-  const handleSendMessage = () => {
-    console.log('Help message sent');
-    message.success('Message sent to administrator!');
-    setHelpMessageVisible(false);
+  const handleSendMessage = async () => {
+    if (!helpMessage.trim()) {
+      message.warning('Please enter a message');
+      return;
+    }
+
+    try {
+      // TODO: API call to send help message
+      console.log('Help message sent:', helpMessage);
+      message.success('Message sent to administrator!');
+      setHelpMessageVisible(false);
+      setHelpMessage('');
+    } catch (error) {
+      message.error('Failed to send message');
+    }
   };
 
-  // User dropdown menu (KYC eklendi)
+  // 🔧 Logout handler
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+    message.success('Logged out successfully');
+  };
+
+  // 🔧 User info helper functions
+  const getUserDisplayName = () => {
+    if (!user) return 'Guest User';
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User';
+  };
+
+  const getUserInitials = () => {
+    if (!user) return 'G';
+    const firstName = user.firstName || '';
+    const lastName = user.lastName || '';
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    }
+    if (firstName) return firstName.charAt(0).toUpperCase();
+    if (user.email) return user.email.charAt(0).toUpperCase();
+    return 'U';
+  };
+
+  const getUserAccountInfo = () => {
+    if (!user) return 'Not logged in';
+    return user.email || user.id?.substring(0, 8) || 'No account info';
+  };
+
+  // User dropdown menu
   const userMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -111,6 +193,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       icon: <LogoutOutlined />,
       label: 'Logout',
       danger: true,
+      onClick: handleLogout,
     },
   ];
 
@@ -235,6 +318,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
               <TextArea
                 placeholder="Type your message here..."
+                value={helpMessage}
+                onChange={(e) => setHelpMessage(e.target.value)}
                 autoSize={{ minRows: 4, maxRows: 8 }}
                 style={{
                   background: '#374151',
@@ -248,7 +333,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
                 <Button 
                   size="small" 
-                  onClick={() => setHelpMessageVisible(false)}
+                  onClick={() => {
+                    setHelpMessageVisible(false);
+                    setHelpMessage('');
+                  }}
                   style={{
                     background: 'transparent',
                     border: '1px solid rgba(255, 255, 255, 0.3)',
@@ -263,6 +351,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   size="small" 
                   type="primary"
                   onClick={handleSendMessage}
+                  loading={false} // TODO: Add loading state
                   style={{
                     background: '#FBBF24',
                     border: '1px solid #F59E0B',
@@ -324,7 +413,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           {/* Right Side - Notifications and User */}
           <Space size="large" align="center">
             {/* Notifications */}
-            <Badge count={2} size="small">
+            <Badge count={isAuthenticated ? 2 : 0} size="small">
               <Button
                 type="text"
                 icon={<BellOutlined />}
@@ -338,70 +427,96 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </Badge>
 
             {/* User Info and Dropdown */}
-            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  border: '1px solid #e5e7eb',
-                  background: '#ffffff',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                }}
-              >
-                <Space align="center" size={8}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div
+            {isAuthenticated || user ? (
+              <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: '1px solid #e5e7eb',
+                    background: '#ffffff',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                >
+                  <Space align="center" size={8}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div
+                        style={{
+                          fontWeight: '600',
+                          color: '#111827',
+                          fontSize: '14px',
+                          lineHeight: '18px',
+                        }}
+                      >
+                        {getUserDisplayName()}
+                      </div>
+                      <div
+                        style={{
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          lineHeight: '16px',
+                        }}
+                      >
+                        {getUserAccountInfo()}
+                      </div>
+                    </div>
+                    <Avatar
+                      size={34}
                       style={{
+                        background: 'linear-gradient(135deg, #27408b 0%, #3a5fcd 100%)',
+                        color: '#fff',
                         fontWeight: '600',
-                        color: '#111827',
                         fontSize: '14px',
-                        lineHeight: '18px',
                       }}
                     >
-                      Super Administrator
-                    </div>
-                    <div
-                      style={{
-                        color: '#6b7280',
-                        fontSize: '12px',
-                        lineHeight: '16px',
-                      }}
-                    >
-                      Account: CCT357004
-                    </div>
-                  </div>
-                  <Avatar
-                    size={34}
-                    style={{
-                      background: 'linear-gradient(135deg, #27408b 0%, #3a5fcd 100%)',
-                      color: '#fff',
-                      fontWeight: '600',
-                      fontSize: '14px',
-                    }}
-                  >
-                    SA
-                  </Avatar>
-                  <LogoutOutlined 
-                    style={{ 
-                      color: '#6b7280', 
-                      fontSize: '16px',
-                      marginLeft: '4px'
-                    }} 
-                  />
-                </Space>
+                      {getUserInitials()}
+                    </Avatar>
+                    <LogoutOutlined 
+                      style={{ 
+                        color: '#6b7280', 
+                        fontSize: '16px',
+                        marginLeft: '4px'
+                      }} 
+                    />
+                  </Space>
+                </div>
+              </Dropdown>
+            ) : (
+              // 🔧 Guest user (not authenticated)
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Button 
+                  type="default" 
+                  onClick={() => navigate('/login')}
+                  style={{
+                    borderColor: '#27408b',
+                    color: '#27408b',
+                  }}
+                >
+                  Login
+                </Button>
+                <Button 
+                  type="primary" 
+                  onClick={() => navigate('/register')}
+                  style={{
+                    background: '#27408b',
+                    borderColor: '#27408b',
+                  }}
+                >
+                  Sign Up
+                </Button>
               </div>
-            </Dropdown>
+            )}
           </Space>
         </Header>
 
