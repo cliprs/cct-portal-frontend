@@ -28,16 +28,16 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    // 🔧 Runtime'da environment variable mevcut değil, kesin URL kullan
+    // 🔧 Backend URL düzeltmesi
     const isLocalhost = window.location.hostname === 'localhost' || 
                        window.location.hostname === '127.0.0.1';
     
-    // Kesin production URL - environment variable güvenilmez
+    // Backend'de API routes /api prefix'li, health endpoint root'ta
     this.baseURL = isLocalhost 
       ? 'http://localhost:3001/api'
       : 'https://aware-enjoyment-production.up.railway.app/api';
     
-    console.log('🌐 API Base URL (Runtime):', this.baseURL);
+    console.log('🌐 API Base URL (Fixed):', this.baseURL);
     console.log('🔍 Is Localhost:', isLocalhost);
     console.log('🔍 Hostname:', window.location.hostname);
     
@@ -235,12 +235,17 @@ class ApiService {
     return this.api;
   }
 
-  // Health check
+  // 🔧 Health check - Root endpoint kullan
   async healthCheck(): Promise<boolean> {
     try {
-      await this.get('/health');
-      return true;
+      // Health check root level'da (/health), /api altında değil
+      const healthUrl = this.baseURL.replace('/api', '') + '/health';
+      console.log('🔍 Health check URL:', healthUrl);
+      
+      const response = await axios.get(healthUrl);
+      return response.status === 200;
     } catch (error) {
+      console.error('❌ Health check failed:', error);
       return false;
     }
   }
