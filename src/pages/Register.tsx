@@ -83,12 +83,25 @@ const Register: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Registration error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
+      });
       
-      if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
-        setError('An account with this email already exists. Please use a different email or try logging in.');
-      } else {
-        setError(error.message || 'Registration failed. Please try again.');
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.status === 400) {
+        errorMessage = 'Invalid input data. Please check all fields.';
+      } else if (error.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

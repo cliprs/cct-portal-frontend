@@ -72,7 +72,24 @@ const Login: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Login error:', error);
-      const errorMessage = error.message || 'Login failed. Please check your credentials.';
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
+      });
+      
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error.status === 400) {
+        errorMessage = 'Invalid email or password.';
+      } else if (error.status === 401) {
+        errorMessage = 'Invalid credentials. Please check your email and password.';
+      } else if (error.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       dispatch(loginFailure(errorMessage));
     } finally {
