@@ -45,7 +45,7 @@ import {
   formatAccountStatus,
   type CreateAccountRequest 
 } from '../services/accountsApi';
-import { ApiError } from '../services/api';
+import { ApiError, apiService } from '../services/api'; // 🔧 apiService import eklendi
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -87,23 +87,27 @@ const Accounts: React.FC = () => {
     }
   }, [token, backendConnected]);
 
-const checkBackendConnection = async () => {
-  try {
-    // Hard-coded URL ile test et
-    const response = await fetch('http://localhost:3001/api/accounts/health');
-    
-    if (response.status === 401 || response.status === 200) {
-      setBackendConnected(true);
-      console.log('✅ Backend connection established');
-      return;
+  // 🔧 Backend connection check - API service kullanıyor
+  const checkBackendConnection = async () => {
+    try {
+      console.log('🔍 Testing backend connection via API service...');
+      
+      // Mevcut API service'i kullan - bu otomatik olarak doğru URL'yi kullanacak
+      const isHealthy = await apiService.healthCheck();
+      
+      if (isHealthy) {
+        setBackendConnected(true);
+        console.log('✅ Backend connection established via API service');
+        return;
+      }
+      
+      throw new Error('Backend health check failed');
+    } catch (error) {
+      setBackendConnected(false);
+      console.warn('⚠️ Backend not available, using fallback mode', error);
     }
-    
-    throw new Error('Backend not responding');
-  } catch (error) {
-    setBackendConnected(false);
-    console.warn('⚠️ Backend not available, using fallback mode');
-  }
-};
+  };
+
   const loadAccountsData = async () => {
     dispatch(setLoading(true));
     setApiError(null);
