@@ -126,12 +126,14 @@ const Accounts: React.FC = () => {
         sortOrder: 'desc'
       });
 
-      if (response.success && response.data) {
-        const transformedAccounts = response.data.accounts.map(transformAccountForFrontend);
-        dispatch(setAccounts(transformedAccounts));
-        console.log(`✅ Loaded ${transformedAccounts.length} accounts from backend`);
-      } else {
-        throw new Error(response.message || 'Failed to load accounts');
+if (response.success && response.data) {
+  // Backend bazen accounts array'i, bazen direkt array dönüyor
+  const accountsArray = Array.isArray(response.data) ? response.data : response.data.accounts || [];
+  const transformedAccounts = accountsArray.map(transformAccountForFrontend);
+  dispatch(setAccounts(transformedAccounts));
+  console.log(`✅ Loaded ${transformedAccounts.length} accounts from backend`);
+} else {
+  throw new Error(response.message || 'Failed to load accounts');
       }
     } catch (error) {
       console.error('❌ Failed to load accounts:', error);
