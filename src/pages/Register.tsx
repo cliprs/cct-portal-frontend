@@ -45,21 +45,18 @@ const Register: React.FC = () => {
       if (response.success && response.data) {
         setSuccess('Account created successfully! Logging you in...');
 
-        // Debug: Log response structure
-        console.log('🔍 Register response:', response.data);
-
         // Type assertion for backend response
         const authData = response.data as any;
 
-        // Save tokens to localStorage (check if exists)
-        if (authData.accessToken) {
-          localStorage.setItem('accessToken', authData.accessToken);
+        // Save tokens to localStorage
+        if (authData.tokens?.accessToken) {
+          localStorage.setItem('accessToken', authData.tokens.accessToken);
         }
-        if (authData.refreshToken) {
-          localStorage.setItem('refreshToken', authData.refreshToken);
+        if (authData.tokens?.refreshToken) {
+          localStorage.setItem('refreshToken', authData.tokens.refreshToken);
         }
 
-        // Update Redux store with fallback data
+        // Update Redux store
         dispatch(loginSuccess({
           user: authData.user || {
             id: Date.now().toString(),
@@ -67,7 +64,7 @@ const Register: React.FC = () => {
             firstName: values.firstName,
             lastName: values.lastName
           },
-          token: authData.accessToken || 'mock-token'
+          token: authData.tokens?.accessToken || 'mock-token'
         }));
 
         console.log('✅ Registration successful, redirecting...');
@@ -75,7 +72,6 @@ const Register: React.FC = () => {
         // Redirect to dashboard after short delay
         setTimeout(() => {
           navigate('/dashboard');
-          // Reload to ensure fresh state
           window.location.reload();
         }, 2000);
       } else {
@@ -83,20 +79,19 @@ const Register: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Registration error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
       
       let errorMessage = 'Registration failed. Please try again.';
       
       if (error.status === 400) {
         if (error.message?.includes('Password does not meet requirements') || error.error === 'WEAK_PASSWORD') {
-          errorMessage = 'Password must be at least 8 characters with uppercase, lowercase, number and special character (@$!%*?&)';
+          errorMessage = 'Password must be at least 8 characters with uppercase, lowercase, number and special character (!@#$%^&*()_+-=[]{}|;:,.<>?)';
+        } else if (error.message?.includes('weak patterns')) {
+          errorMessage = 'Password contains weak patterns (like 123456, abcdef, password, qwerty). Please choose a different password.';
         } else {
           errorMessage = 'Invalid input data. Please check all fields.';
         }
+      } else if (error.status === 409) {
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
       } else if (error.status === 500) {
         errorMessage = 'Server error. Please try again later.';
       } else if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
@@ -250,18 +245,41 @@ const Register: React.FC = () => {
           <Form.Item
             name="password"
             label="Password"
+            extra="Must contain: uppercase, lowercase, number, special char (!@#$%^&*()_+-=[]{}|;:,.<>?). Avoid weak patterns like: 123456, abcdef, password, qwerty"
             rules={[
               { required: true, message: 'Please enter your password' },
               { min: 8, message: 'Password must be at least 8 characters' },
               { 
-                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                message: 'Password must contain uppercase, lowercase, number and special character (@$!%*?&)'
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{}|;:,.<>?]{8,}$/,
+                message: 'Password must contain uppercase, lowercase, number and special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+              },
+              {
+                validator: (_: any, value: any) => {
+                  if (!value) return Promise.resolve();
+                  
+                  // Check for weak patterns
+                  const weakPatterns = [
+                    /(.)\1{2,}/, // Three or more consecutive identical characters
+                    /123456/, // Sequential numbers
+                    /abcdef/i, // Sequential letters
+                    /password/i, // Contains "password"
+                    /qwerty/i, // Contains "qwerty"
+                  ];
+                  
+                  for (const pattern of weakPatterns) {
+                    if (pattern.test(value)) {
+                      return Promise.reject(new Error('Password contains weak patterns. Avoid sequences like 123456, abcdef, password, qwerty'));
+                    }
+                  }
+                  
+                  return Promise.resolve();
+                }
               }
             ]}
           >
             <Input.Password 
               prefix={<LockOutlined />}
-              placeholder="Create a strong password (min 8 chars, A-z, 0-9, @$!%*?&)"
+              placeholder="Create a strong password"
               autoComplete="new-password"
             />
           </Form.Item>
@@ -313,13 +331,28 @@ const Register: React.FC = () => {
           </Text>
         </Divider>
 
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <Text type="secondary">
             Already have an account?{' '}
             <Link to="/login" style={{ color: '#27408b', fontWeight: '500' }}>
               Sign In
             </Link>
           </Text>
+        </div>
+
+        <div style={{ 
+          padding: '16px', 
+          background: '#f8f9fa', 
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            <strong>Password Examples (Strong):</strong><br />
+            MySecure2024!<br />
+            Trading#Pass9<br />
+            Financial$123<br />
+            <span style={{ color: '#ff4d4f' }}>❌ Avoid: Test123456, Password123, Qwerty123</span>
+          </div>
         </div>
       </Card>
     </div>
