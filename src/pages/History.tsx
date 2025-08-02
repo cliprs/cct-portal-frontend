@@ -33,8 +33,7 @@ import {
 } from '@ant-design/icons';
 import { useAppSelector, useAppDispatch } from '../store';
 import dayjs from 'dayjs';
-import { getTransactionHistory } from '../services/transactionsApi';
-import api from '../services/api';
+import { getTransactionHistory, exportTransactionHistory } from '../services/transactionsApi';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -112,27 +111,29 @@ const History: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
-const fetchTransactionHistory = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    const responseData = await getTransactionHistory();
-    
-    if (responseData && responseData.success) {
-  setTransactions(responseData.data || []);
-} else {
-  setError(responseData?.message || 'Failed to load transactions');
-}
+  const fetchTransactionHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const responseData = await getTransactionHistory();
+      console.log('API Service Response:', responseData); // Debug için
+      
+      if (responseData && responseData.success) {
+        setTransactions(responseData.data || []);
+        setError(null);
+      } else {
+        setError(responseData?.message || 'Failed to load transactions');
+      }
+    } catch (err: any) {
+      console.error('Transaction history error:', err);
+      setError('Failed to load transaction history');
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  } catch (err: any) {
-    console.error('Transaction history error:', err);
-    setError(err.response?.data?.message || 'Failed to load transaction history');
-    setTransactions([]);
-  } finally {
-    setLoading(false);
-  }
-};
   // Filter transactions based on search criteria
   useEffect(() => {
     let filtered = transactions || [];
@@ -212,19 +213,17 @@ const fetchTransactionHistory = async () => {
 
   const handleExport = async () => {
     try {
-      // Call export API endpoint
-      const response = await api.get('/transactions/export', {
-        params: {
-          type: selectedType !== 'all' ? selectedType : undefined,
-          status: selectedStatus !== 'all' ? selectedStatus : undefined,
-          startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
-          endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
-        },
-        responseType: 'blob',
-      });
+      const filters = {
+        type: selectedType !== 'all' ? selectedType : undefined,
+        status: selectedStatus !== 'all' ? selectedStatus : undefined,
+        startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
+      };
+
+      const data = await exportTransactionHistory(filters);
 
       // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]));
+      const url = window.URL.createObjectURL(new Blob([data as BlobPart]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `transaction-history-${dayjs().format('YYYY-MM-DD')}.csv`);
