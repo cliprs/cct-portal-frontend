@@ -94,7 +94,7 @@ const History: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get<ApiResponse<Transaction[]>>('/api/transactions/history');
+      const response = await api.get<ApiResponse<Transaction[]>>('/transactions/history');
       const responseData = response.data as ApiResponse<Transaction[]>;
       
       if (responseData.success) {
@@ -191,7 +191,7 @@ const History: React.FC = () => {
   const handleExport = async () => {
     try {
       // Call export API endpoint
-      const response = await api.get('/api/transactions/export', {
+      const response = await api.get('/transactions/export', {
         params: {
           type: selectedType !== 'all' ? selectedType : undefined,
           status: selectedStatus !== 'all' ? selectedStatus : undefined,
