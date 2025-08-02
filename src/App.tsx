@@ -15,6 +15,7 @@ import KYCUpload from './pages/KYC/KYCUpload';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import './App.css';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Ant Design theme configuration
 const theme = {
@@ -57,13 +58,14 @@ const App: React.FC = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
+                
                 {/* Protected Routes - MainLayout içinde */}
                 <Route
                   path="/*"
                   element={
                     <MainLayout>
                       <Routes>
-                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />                        <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/accounts" element={<Accounts />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/deposit" element={<Deposit />} />
