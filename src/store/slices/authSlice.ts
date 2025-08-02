@@ -13,6 +13,7 @@ interface User {
   kycStatus?: string;
   kycProgress?: number;
   isVerified?: boolean;
+  role?: 'USER' | 'ADMIN' | 'SUPERADMIN'; // ✅ Added role property
 }
 
 interface AuthState {
@@ -101,6 +102,7 @@ const authSlice = createSlice({
       localStorage.setItem('accessToken', action.payload.token);
       
       console.log('✅ Auth state updated successfully');
+      console.log('✅ User role:', action.payload.user.role); // ✅ Now TypeScript won't complain
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
