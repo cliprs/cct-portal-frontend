@@ -14,6 +14,8 @@ import {
   Statistic,
   Tooltip,
   message,
+  Empty,
+  Alert,
 } from 'antd';
 import {
   HistoryOutlined,
@@ -27,8 +29,11 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   SyncOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch } from '../store';import dayjs from 'dayjs';
+import { useAppSelector, useAppDispatch } from '../store';
+import dayjs from 'dayjs';
+import api from '../services/api';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -48,130 +53,63 @@ interface Transaction {
   description: string;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
 const History: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { financialSummary } = useAppSelector((state) => state.user);
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
-  // Mock transaction data
+  // Fetch transaction history on component mount
   useEffect(() => {
-   
-    
-    const mockTransactions: Transaction[] = [
-      {
-        id: '1',
-        date: '2024-01-15 14:30:00',
-        type: 'deposit',
-        amount: 5000,
-        fee: 0,
-        netAmount: 5000,
-        status: 'completed',
-        transactionId: 'TXN001234567890',
-        description: 'TRC20 Deposit via USDT',
-      },
-      {
-        id: '2',
-        date: '2024-01-14 09:15:00',
-        type: 'withdraw',
-        amount: 2000,
-        fee: 20,
-        netAmount: 1980,
-        status: 'completed',
-        transactionId: 'TXN001234567891',
-        description: 'Withdrawal to Bitcoin wallet',
-      },
-      {
-        id: '3',
-        date: '2024-01-13 16:45:00',
-        type: 'internal_transfer',
-        fromAccount: '1001234',
-        toAccount: '1001235',
-        amount: 1500,
-        fee: 0,
-        netAmount: 1500,
-        status: 'completed',
-        transactionId: 'TXN001234567892',
-        description: 'Transfer between MT4 accounts',
-      },
-      {
-        id: '4',
-        date: '2024-01-12 11:20:00',
-        type: 'external_transfer',
-        amount: 800,
-        fee: 8,
-        netAmount: 792,
-        status: 'pending',
-        transactionId: 'TXN001234567893',
-        description: 'Transfer to CCT987654',
-      },
-      {
-        id: '5',
-        date: '2024-01-11 13:10:00',
-        type: 'deposit',
-        amount: 3000,
-        fee: 0,
-        netAmount: 3000,
-        status: 'processing',
-        transactionId: 'TXN001234567894',
-        description: 'BEP20 Deposit via USDT',
-      },
-      {
-        id: '6',
-        date: '2024-01-10 10:30:00',
-        type: 'withdraw',
-        amount: 1200,
-        fee: 12,
-        netAmount: 1188,
-        status: 'rejected',
-        transactionId: 'TXN001234567895',
-        description: 'Withdrawal rejected - Invalid address',
-      },
-      {
-        id: '7',
-        date: '2024-01-09 15:45:00',
-        type: 'external_transfer',
-        amount: 600,
-        fee: 6,
-        netAmount: 594,
-        status: 'cancelled',
-        transactionId: 'TXN001234567896',
-        description: 'Transfer cancelled by user',
-      },
-      {
-        id: '8',
-        date: '2024-01-08 08:20:00',
-        type: 'internal_transfer',
-        fromAccount: '1001235',
-        toAccount: '1001236',
-        amount: 2200,
-        fee: 0,
-        netAmount: 2200,
-        status: 'completed',
-        transactionId: 'TXN001234567897',
-        description: 'Transfer MT5 to MT4 EUR account',
-      },
-    ];
+    if (isAuthenticated && user) {
+      fetchTransactionHistory();
+    }
+  }, [isAuthenticated, user]);
 
-    setTransactions(mockTransactions);
-    setFilteredTransactions(mockTransactions);
-  }, [dispatch]);
+  const fetchTransactionHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.get<ApiResponse<Transaction[]>>('/api/transactions/history');
+      const responseData = response.data as ApiResponse<Transaction[]>;
+      
+      if (responseData.success) {
+        setTransactions(responseData.data || []);
+      } else {
+        setError(responseData.message || 'Failed to load transactions');
+      }
+    } catch (err: any) {
+      console.error('Transaction history error:', err);
+      setError(err.response?.data?.message || 'Failed to load transaction history');
+      setTransactions([]); // Set empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter transactions based on search criteria
   useEffect(() => {
-    let filtered = transactions;
+    let filtered = transactions || [];
 
     // Text search
     if (searchText) {
       filtered = filtered.filter(tx => 
-        tx.transactionId.toLowerCase().includes(searchText.toLowerCase()) ||
-        tx.description.toLowerCase().includes(searchText.toLowerCase()) ||
+        tx.transactionId?.toLowerCase().includes(searchText.toLowerCase()) ||
+        tx.description?.toLowerCase().includes(searchText.toLowerCase()) ||
         tx.fromAccount?.toLowerCase().includes(searchText.toLowerCase()) ||
         tx.toAccount?.toLowerCase().includes(searchText.toLowerCase())
       );
@@ -204,8 +142,34 @@ const History: React.FC = () => {
     message.success('Transaction ID copied to clipboard!');
   };
 
-  const handleExport = () => {
-    message.success('Transaction history exported successfully!');
+  const handleExport = async () => {
+    try {
+      // Call export API endpoint
+      const response = await api.get('/api/transactions/export', {
+        params: {
+          type: selectedType !== 'all' ? selectedType : undefined,
+          status: selectedStatus !== 'all' ? selectedStatus : undefined,
+          startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+          endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
+        },
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `transaction-history-${dayjs().format('YYYY-MM-DD')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      message.success('Transaction history exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      message.error('Failed to export transaction history');
+    }
   };
 
   const handleReset = () => {
@@ -213,6 +177,12 @@ const History: React.FC = () => {
     setSelectedType('all');
     setSelectedStatus('all');
     setDateRange(null);
+  };
+
+  const handleRefresh = () => {
+    if (isAuthenticated && user) {
+      fetchTransactionHistory();
+    }
   };
 
   // Table columns
@@ -262,8 +232,8 @@ const History: React.FC = () => {
         if (record.type === 'internal_transfer') {
           return (
             <div>
-              <div style={{ fontSize: '12px' }}>From: {record.fromAccount}</div>
-              <div style={{ fontSize: '12px' }}>To: {record.toAccount}</div>
+              <div style={{ fontSize: '12px' }}>From: {record.fromAccount || 'N/A'}</div>
+              <div style={{ fontSize: '12px' }}>To: {record.toAccount || 'N/A'}</div>
             </div>
           );
         }
@@ -290,7 +260,7 @@ const History: React.FC = () => {
                           (record.type === 'internal_transfer' && record.toAccount);
         return (
           <Text strong style={{ color: isPositive ? '#52c41a' : '#ff4d4f' }}>
-            {isPositive ? '+' : '-'}${amount.toLocaleString()}
+            {isPositive ? '+' : '-'}${amount?.toLocaleString() || '0'}
           </Text>
         );
       },
@@ -317,7 +287,7 @@ const History: React.FC = () => {
                           (record.type === 'internal_transfer' && record.toAccount);
         return (
           <Text strong style={{ color: isPositive ? '#52c41a' : '#ff4d4f' }}>
-            {isPositive ? '+' : '-'}${netAmount.toLocaleString()}
+            {isPositive ? '+' : '-'}${netAmount?.toLocaleString() || '0'}
           </Text>
         );
       },
@@ -342,7 +312,7 @@ const History: React.FC = () => {
           rejected: { color: 'error', icon: <CloseCircleOutlined />, text: 'Rejected' },
           cancelled: { color: 'default', icon: <ExclamationCircleOutlined />, text: 'Cancelled' },
         };
-        const config = statusConfig[status as keyof typeof statusConfig];
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
         return (
           <Tag color={config.color} icon={config.icon}>
             {config.text}
@@ -358,16 +328,18 @@ const History: React.FC = () => {
       render: (txId: string) => (
         <Space>
           <Text code style={{ fontSize: '11px' }}>
-            {txId.substring(0, 12)}...
+            {txId ? `${txId.substring(0, 12)}...` : 'N/A'}
           </Text>
-          <Tooltip title="Copy Transaction ID">
-            <Button 
-              icon={<CopyOutlined />} 
-              size="small" 
-              type="text"
-              onClick={() => handleCopyTransactionId(txId)}
-            />
-          </Tooltip>
+          {txId && (
+            <Tooltip title="Copy Transaction ID">
+              <Button 
+                icon={<CopyOutlined />} 
+                size="small" 
+                type="text"
+                onClick={() => handleCopyTransactionId(txId)}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -376,14 +348,102 @@ const History: React.FC = () => {
   // Calculate summary statistics
   const completedTransactions = filteredTransactions.filter(tx => tx.status === 'completed');
   const pendingTransactions = filteredTransactions.filter(tx => tx.status === 'pending' || tx.status === 'processing');
-  const totalVolume = completedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-  const totalFees = completedTransactions.reduce((sum, tx) => sum + tx.fee, 0);
+  const totalVolume = completedTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const totalFees = completedTransactions.reduce((sum, tx) => sum + (tx.fee || 0), 0);
+
+  // Show authentication required message
+  if (!isAuthenticated) {
+    return (
+      <div style={{ padding: '50px 0', textAlign: 'center' }}>
+        <Alert
+          message="Authentication Required"
+          description="Please log in to view your transaction history."
+          type="warning"
+          showIcon
+          style={{ maxWidth: '500px', margin: '0 auto' }}
+        />
+      </div>
+    );
+  }
+
+  // Show error message
+  if (error) {
+    return (
+      <div>
+        <Title level={2} style={{ marginBottom: 24, color: '#27408b' }}>
+          Transaction History
+        </Title>
+        <Alert
+          message="Error Loading Transactions"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={handleRefresh}>
+              Retry
+            </Button>
+          }
+          style={{ marginBottom: 24 }}
+        />
+      </div>
+    );
+  }
+
+  // Show empty state for new users
+  if (!loading && (!transactions || transactions.length === 0)) {
+    return (
+      <div>
+        <Title level={2} style={{ marginBottom: 24, color: '#27408b' }}>
+          Transaction History
+        </Title>
+        
+        <Card variant="outlined" style={{ borderRadius: '12px', textAlign: 'center', padding: '50px 20px' }}>
+          <Empty
+            image={<InboxOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} />}
+            imageStyle={{ height: 80 }}
+            description={
+              <div>
+                <Title level={4} style={{ color: '#8c8c8c', marginBottom: 8 }}>
+                  No Transactions Yet
+                </Title>
+                <Text style={{ color: '#8c8c8c' }}>
+                  Your transaction history will appear here once you make your first transaction.
+                </Text>
+              </div>
+            }
+          >
+            <Space>
+              <Button type="primary" onClick={() => window.location.href = '/transactions/deposit'}>
+                Make Your First Deposit
+              </Button>
+              <Button onClick={handleRefresh}>
+                Refresh
+              </Button>
+            </Space>
+          </Empty>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <Title level={2} style={{ marginBottom: 24, color: '#27408b' }}>
-        Transaction History
-      </Title>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Title level={2} style={{ marginBottom: 0, color: '#27408b' }}>
+            Transaction History
+          </Title>
+        </Col>
+        <Col>
+          <Button 
+            icon={<SyncOutlined />} 
+            onClick={handleRefresh}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+        </Col>
+      </Row>
 
       {/* Summary Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
