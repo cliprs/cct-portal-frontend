@@ -46,26 +46,27 @@ interface UserState {
   error: string | null;
 }
 
+// 🔧 DEMO DATA REMOVED - Set to 0
 const initialState: UserState = {
   profile: null,
   financialSummary: {
-    equity: 15000,
-    totalProfit: 2500,
-    balance: 17500,
-    wallet: 1200,
+    equity: 0,
+    totalProfit: 0,
+    balance: 0,
+    wallet: 0,
     currency: 'USD'
   },
   kycStatus: {
-    status: 'approved',
+    status: 'not_uploaded',
     documents: {
-      idFront: true,
-      idBack: true,
-      proofOfResidence: true
+      idFront: false,
+      idBack: false,
+      proofOfResidence: false
     }
   },
   accountSummary: {
-    activeAccounts: 3,
-    usedWalletAddresses: 2,
+    activeAccounts: 0,
+    usedWalletAddresses: 0,
     accountStatus: 'active'
   },
   loading: false,
@@ -99,19 +100,28 @@ const userSlice = createSlice({
     setAccountSummary: (state, action: PayloadAction<AccountSummary>) => {
       state.accountSummary = action.payload;
     },
-    loadMockData: (state) => {
-      state.profile = {
-        id: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
-        phone: '+1234567890',
-        country: 'Turkey',
-        city: 'İzmir',
-        address: '123 Main Street',
-        postalCode: '35000',
-        birthDate: '1990-01-01',
-        nationality: 'Turkish'
+    // 🔧 loadMockData REMOVED - No more demo data loading
+    clearUserData: (state) => {
+      state.profile = null;
+      state.financialSummary = {
+        equity: 0,
+        totalProfit: 0,
+        balance: 0,
+        wallet: 0,
+        currency: 'USD'
+      };
+      state.kycStatus = {
+        status: 'not_uploaded',
+        documents: {
+          idFront: false,
+          idBack: false,
+          proofOfResidence: false
+        }
+      };
+      state.accountSummary = {
+        activeAccounts: 0,
+        usedWalletAddresses: 0,
+        accountStatus: 'active'
       };
     }
   }
@@ -125,7 +135,7 @@ export const {
   setFinancialSummary,
   setKYCStatus,
   setAccountSummary,
-  loadMockData
+  clearUserData
 } = userSlice.actions;
 
 export default userSlice.reducer;
