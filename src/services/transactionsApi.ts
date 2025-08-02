@@ -47,10 +47,10 @@ export interface CreateTransactionData {
   toAccountId?: string;
 }
 
-// Get transaction history
+// Get transaction history - Returns the full API response including success, data, message
 export const getTransactionHistory = async () => {
   const response = await api.get<TransactionResponse>('/transactions/history');
-  return response.data;
+  return response.data; // This contains { success: true, data: [...], message: "..." }
 };
 
 // Create deposit transaction

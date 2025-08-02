@@ -117,17 +117,24 @@ const History: React.FC = () => {
       setError(null);
       
       const responseData = await getTransactionHistory();
-      console.log('API Service Response:', responseData); // Debug için
+      console.log('API Service Response:', responseData);
       
+      // Check if response has the expected format
       if (responseData && responseData.success) {
+        // Standard API response format: { success: true, data: [...] }
         setTransactions(responseData.data || []);
         setError(null);
+      } else if (Array.isArray(responseData)) {
+        // Direct array response (fallback)
+        setTransactions(responseData);
+        setError(null);
       } else {
+        // Handle error case
         setError(responseData?.message || 'Failed to load transactions');
       }
     } catch (err: any) {
       console.error('Transaction history error:', err);
-      setError('Failed to load transaction history');
+      setError(err.response?.data?.message || 'Failed to load transaction history');
       setTransactions([]);
     } finally {
       setLoading(false);
