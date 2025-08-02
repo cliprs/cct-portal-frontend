@@ -85,6 +85,28 @@ const History: React.FC = () => {
   // Fetch transaction history on component mount
   useEffect(() => {
     if (isAuthenticated && user) {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.log('🚨 No access token found');
+        setError('Please log in to view your transaction history');
+        return;
+      }
+      
+      // Check if token is expired
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const isExpired = Date.now() > payload.exp * 1000;
+        if (isExpired) {
+          console.log('🚨 Token is expired');
+          setError('Your session has expired. Please log in again.');
+          return;
+        }
+      } catch (err) {
+        console.log('🚨 Invalid token format');
+        setError('Invalid session. Please log in again.');
+        return;
+      }
+      
       fetchTransactionHistory();
     }
   }, [isAuthenticated, user]);
