@@ -246,14 +246,14 @@ const Withdraw: React.FC = () => {
       <Card variant="outlined" style={{ marginBottom: 24, borderRadius: '12px', background: 'linear-gradient(135deg, #36648b 0%, #4a708b 100%)' }}>
         <Statistic
           title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '16px' }}>Available Balance</span>}
-          value={financialSummary?.balance || 17500}
+          value={financialSummary?.balance || 0}
           precision={2}
           valueStyle={{ color: '#fff', fontSize: '32px', fontWeight: 'bold' }}
           prefix={<BankOutlined />}
           suffix={financialSummary?.currency || 'USD'}
         />
         <Text style={{ color: 'rgba(255,255,255,0.7)' }}>
-          You can withdraw up to ${(financialSummary?.balance || 17500).toLocaleString()} USD
+          You can withdraw up to ${(financialSummary?.balance || 0).toLocaleString()} USD
         </Text>
       </Card>
 

@@ -247,7 +247,7 @@ const Deposit: React.FC = () => {
       >
         <Statistic
           title={<span style={{ color: 'rgba(0,0,0,0.7)', fontSize: '16px' }}>Your Wallet Balance</span>}
-          value={financialSummary?.wallet || 1200}
+          value={financialSummary?.wallet || 0}
           precision={2}
           valueStyle={{ color: '#333', fontSize: '32px', fontWeight: 'bold' }}
           prefix={<WalletOutlined />}
