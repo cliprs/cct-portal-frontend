@@ -41,16 +41,26 @@ const { Option } = Select;
 
 interface Transaction {
   id: string;
-  date: string;
-  type: 'deposit' | 'withdraw' | 'internal_transfer' | 'external_transfer';
-  fromAccount?: string;
-  toAccount?: string;
+  transactionId: string;
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'TRADE' | 'BONUS' | 'FEE' | 
+        'deposit' | 'withdraw' | 'internal_transfer' | 'external_transfer'; // Support both formats
   amount: number;
   fee: number;
   netAmount: number;
-  status: 'completed' | 'pending' | 'processing' | 'rejected' | 'cancelled';
-  transactionId: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' |
+          'completed' | 'pending' | 'processing' | 'rejected' | 'cancelled'; // Support both formats
   description: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  account?: {
+    id: string;
+    accountNumber: string;
+    platform: string;
+  };
+  // Optional legacy fields for compatibility
+  date?: string;
+  fromAccount?: string;
+  toAccount?: string;
 }
 
 interface ApiResponse<T> {
@@ -117,12 +127,48 @@ const History: React.FC = () => {
 
     // Type filter
     if (selectedType !== 'all') {
-      filtered = filtered.filter(tx => tx.type === selectedType);
+      filtered = filtered.filter(tx => {
+        // Support both backend and frontend type formats
+        const typeMapping: { [key: string]: string[] } = {
+          'DEPOSIT': ['DEPOSIT', 'deposit'],
+          'WITHDRAWAL': ['WITHDRAWAL', 'withdraw'],
+          'TRANSFER': ['TRANSFER', 'internal_transfer'],
+          'external_transfer': ['external_transfer'],
+          'TRADE': ['TRADE'],
+          'BONUS': ['BONUS'],
+          'FEE': ['FEE'],
+          // Also support direct matches
+          'deposit': ['DEPOSIT', 'deposit'],
+          'withdraw': ['WITHDRAWAL', 'withdraw'],
+          'internal_transfer': ['TRANSFER', 'internal_transfer'],
+        };
+        
+        const allowedTypes = typeMapping[selectedType] || [selectedType];
+        return allowedTypes.includes(tx.type);
+      });
     }
 
     // Status filter
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(tx => tx.status === selectedStatus);
+      filtered = filtered.filter(tx => {
+        // Support both backend and frontend status formats
+        const statusMapping: { [key: string]: string[] } = {
+          'COMPLETED': ['COMPLETED', 'completed'],
+          'PENDING': ['PENDING', 'pending'],
+          'PROCESSING': ['PROCESSING', 'processing'],
+          'FAILED': ['FAILED', 'rejected'],
+          'CANCELLED': ['CANCELLED', 'cancelled'],
+          // Also support direct matches
+          'completed': ['COMPLETED', 'completed'],
+          'pending': ['PENDING', 'pending'],
+          'processing': ['PROCESSING', 'processing'],
+          'rejected': ['FAILED', 'rejected'],
+          'cancelled': ['CANCELLED', 'cancelled'],
+        };
+        
+        const allowedStatuses = statusMapping[selectedStatus] || [selectedStatus];
+        return allowedStatuses.includes(tx.status);
+      });
     }
 
     // Date range filter
@@ -189,18 +235,25 @@ const History: React.FC = () => {
   const columns = [
     {
       title: 'Date & Time',
-      dataIndex: 'date',
-      key: 'date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       width: 160,
-      sorter: (a: Transaction, b: Transaction) => dayjs(a.date).unix() - dayjs(b.date).unix(),
-      render: (date: string) => (
-        <div>
-          <div>{dayjs(date).format('MMM DD, YYYY')}</div>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            {dayjs(date).format('HH:mm:ss')}
-          </Text>
-        </div>
-      ),
+      sorter: (a: Transaction, b: Transaction) => {
+        const dateA = new Date(a.createdAt || a.date || '');
+        const dateB = new Date(b.createdAt || b.date || '');
+        return dateA.getTime() - dateB.getTime();
+      },
+      render: (createdAt: string | Date, record: Transaction) => {
+        const date = createdAt || record.date;
+        return (
+          <div>
+            <div>{dayjs(date).format('MMM DD, YYYY')}</div>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {dayjs(date).format('HH:mm:ss')}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: 'Type',
@@ -208,19 +261,28 @@ const History: React.FC = () => {
       key: 'type',
       width: 140,
       filters: [
-        { text: 'Deposit', value: 'deposit' },
-        { text: 'Withdraw', value: 'withdraw' },
-        { text: 'Internal Transfer', value: 'internal_transfer' },
-        { text: 'External Transfer', value: 'external_transfer' },
+        { text: 'Deposit', value: 'DEPOSIT' },
+        { text: 'Withdraw', value: 'WITHDRAWAL' },
+        { text: 'Transfer', value: 'TRANSFER' },
+        { text: 'Trade', value: 'TRADE' },
+        { text: 'Bonus', value: 'BONUS' },
+        { text: 'Fee', value: 'FEE' },
       ],
       render: (type: string) => {
         const typeConfig = {
+          DEPOSIT: { color: 'green', text: 'Deposit' },
+          WITHDRAWAL: { color: 'orange', text: 'Withdraw' },
+          TRANSFER: { color: 'blue', text: 'Transfer' },
+          TRADE: { color: 'purple', text: 'Trade' },
+          BONUS: { color: 'cyan', text: 'Bonus' },
+          FEE: { color: 'red', text: 'Fee' },
+          // Legacy support
           deposit: { color: 'green', text: 'Deposit' },
           withdraw: { color: 'orange', text: 'Withdraw' },
           internal_transfer: { color: 'blue', text: 'Internal' },
           external_transfer: { color: 'purple', text: 'External' },
         };
-        const config = typeConfig[type as keyof typeof typeConfig];
+        const config = typeConfig[type as keyof typeof typeConfig] || { color: 'default', text: type };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -229,21 +291,26 @@ const History: React.FC = () => {
       key: 'fromTo',
       width: 150,
       render: (record: Transaction) => {
-        if (record.type === 'internal_transfer') {
+        const transferTypes = ['TRANSFER', 'internal_transfer'];
+        const externalTypes = ['external_transfer'];
+        const depositTypes = ['DEPOSIT', 'deposit'];
+        const withdrawTypes = ['WITHDRAWAL', 'withdraw'];
+        
+        if (transferTypes.includes(record.type)) {
           return (
             <div>
-              <div style={{ fontSize: '12px' }}>From: {record.fromAccount || 'N/A'}</div>
-              <div style={{ fontSize: '12px' }}>To: {record.toAccount || 'N/A'}</div>
+              <div style={{ fontSize: '12px' }}>From: {record.fromAccount || record.account?.accountNumber || 'N/A'}</div>
+              <div style={{ fontSize: '12px' }}>To: {record.toAccount || 'Internal'}</div>
             </div>
           );
         }
-        if (record.type === 'external_transfer') {
+        if (externalTypes.includes(record.type)) {
           return <Text style={{ fontSize: '12px' }}>To: External User</Text>;
         }
-        if (record.type === 'deposit') {
+        if (depositTypes.includes(record.type)) {
           return <Text style={{ fontSize: '12px' }}>From: Crypto Wallet</Text>;
         }
-        if (record.type === 'withdraw') {
+        if (withdrawTypes.includes(record.type)) {
           return <Text style={{ fontSize: '12px' }}>To: Crypto Wallet</Text>;
         }
         return '-';
@@ -256,11 +323,17 @@ const History: React.FC = () => {
       width: 120,
       sorter: (a: Transaction, b: Transaction) => a.amount - b.amount,
       render: (amount: number, record: Transaction) => {
-        const isPositive = record.type === 'deposit' || 
-                          (record.type === 'internal_transfer' && record.toAccount);
+        const depositTypes = ['DEPOSIT', 'deposit'];
+        const transferInTypes = ['TRANSFER'];
+        const positiveTransfer = record.type === 'TRANSFER' && record.amount > 0;
+        const legacyTransferIn = record.type === 'internal_transfer' && record.toAccount;
+        
+        const isPositive = depositTypes.includes(record.type) || positiveTransfer || legacyTransferIn;
+        const displayAmount = Math.abs(amount);
+        
         return (
           <Text strong style={{ color: isPositive ? '#52c41a' : '#ff4d4f' }}>
-            {isPositive ? '+' : '-'}${amount?.toLocaleString() || '0'}
+            {isPositive ? '+' : '-'}${displayAmount?.toLocaleString() || '0'}
           </Text>
         );
       },
@@ -283,11 +356,16 @@ const History: React.FC = () => {
       width: 120,
       sorter: (a: Transaction, b: Transaction) => a.netAmount - b.netAmount,
       render: (netAmount: number, record: Transaction) => {
-        const isPositive = record.type === 'deposit' || 
-                          (record.type === 'internal_transfer' && record.toAccount);
+        const depositTypes = ['DEPOSIT', 'deposit'];
+        const positiveTransfer = record.type === 'TRANSFER' && record.netAmount > 0;
+        const legacyTransferIn = record.type === 'internal_transfer' && record.toAccount;
+        
+        const isPositive = depositTypes.includes(record.type) || positiveTransfer || legacyTransferIn;
+        const displayAmount = Math.abs(netAmount);
+        
         return (
           <Text strong style={{ color: isPositive ? '#52c41a' : '#ff4d4f' }}>
-            {isPositive ? '+' : '-'}${netAmount?.toLocaleString() || '0'}
+            {isPositive ? '+' : '-'}${displayAmount?.toLocaleString() || '0'}
           </Text>
         );
       },
@@ -298,21 +376,27 @@ const History: React.FC = () => {
       key: 'status',
       width: 120,
       filters: [
-        { text: 'Completed', value: 'completed' },
-        { text: 'Pending', value: 'pending' },
-        { text: 'Processing', value: 'processing' },
-        { text: 'Rejected', value: 'rejected' },
-        { text: 'Cancelled', value: 'cancelled' },
+        { text: 'Completed', value: 'COMPLETED' },
+        { text: 'Pending', value: 'PENDING' },
+        { text: 'Processing', value: 'PROCESSING' },
+        { text: 'Failed', value: 'FAILED' },
+        { text: 'Cancelled', value: 'CANCELLED' },
       ],
       render: (status: string) => {
         const statusConfig = {
+          COMPLETED: { color: 'success', icon: <CheckCircleOutlined />, text: 'Completed' },
+          PENDING: { color: 'warning', icon: <ClockCircleOutlined />, text: 'Pending' },
+          PROCESSING: { color: 'processing', icon: <SyncOutlined spin />, text: 'Processing' },
+          FAILED: { color: 'error', icon: <CloseCircleOutlined />, text: 'Failed' },
+          CANCELLED: { color: 'default', icon: <ExclamationCircleOutlined />, text: 'Cancelled' },
+          // Legacy support
           completed: { color: 'success', icon: <CheckCircleOutlined />, text: 'Completed' },
           pending: { color: 'warning', icon: <ClockCircleOutlined />, text: 'Pending' },
           processing: { color: 'processing', icon: <SyncOutlined spin />, text: 'Processing' },
           rejected: { color: 'error', icon: <CloseCircleOutlined />, text: 'Rejected' },
           cancelled: { color: 'default', icon: <ExclamationCircleOutlined />, text: 'Cancelled' },
         };
-        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
         return (
           <Tag color={config.color} icon={config.icon}>
             {config.text}
@@ -346,9 +430,13 @@ const History: React.FC = () => {
   ];
 
   // Calculate summary statistics
-  const completedTransactions = filteredTransactions.filter(tx => tx.status === 'completed');
-  const pendingTransactions = filteredTransactions.filter(tx => tx.status === 'pending' || tx.status === 'processing');
-  const totalVolume = completedTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const completedStatuses = ['COMPLETED', 'completed'];
+  const pendingStatuses = ['PENDING', 'PROCESSING', 'pending', 'processing'];
+  
+  const completedTransactions = filteredTransactions.filter(tx => completedStatuses.includes(tx.status));
+  const pendingTransactions = filteredTransactions.filter(tx => pendingStatuses.includes(tx.status));
+  
+  const totalVolume = completedTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
   const totalFees = completedTransactions.reduce((sum, tx) => sum + (tx.fee || 0), 0);
 
   // Show authentication required message
@@ -513,10 +601,13 @@ const History: React.FC = () => {
               style={{ width: '100%' }}
             >
               <Option value="all">All Types</Option>
-              <Option value="deposit">Deposit</Option>
-              <Option value="withdraw">Withdraw</Option>
-              <Option value="internal_transfer">Internal Transfer</Option>
+              <Option value="DEPOSIT">Deposit</Option>
+              <Option value="WITHDRAWAL">Withdraw</Option>
+              <Option value="TRANSFER">Transfer</Option>
               <Option value="external_transfer">External Transfer</Option>
+              <Option value="TRADE">Trade</Option>
+              <Option value="BONUS">Bonus</Option>
+              <Option value="FEE">Fee</Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={4}>
@@ -527,11 +618,11 @@ const History: React.FC = () => {
               style={{ width: '100%' }}
             >
               <Option value="all">All Status</Option>
-              <Option value="completed">Completed</Option>
-              <Option value="pending">Pending</Option>
-              <Option value="processing">Processing</Option>
-              <Option value="rejected">Rejected</Option>
-              <Option value="cancelled">Cancelled</Option>
+              <Option value="COMPLETED">Completed</Option>
+              <Option value="PENDING">Pending</Option>
+              <Option value="PROCESSING">Processing</Option>
+              <Option value="FAILED">Failed/Rejected</Option>
+              <Option value="CANCELLED">Cancelled</Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={6}>

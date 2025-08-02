@@ -611,7 +611,7 @@ const Transfer: React.FC = () => {
           <Col xs={24} sm={12}>
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '16px' }}>Available for Transfer</span>}
-              value={(financialSummary?.balance || 0) - 1000} // Reserve 1000
+              value={Math.max((financialSummary?.balance || 0) - 1000, 0)} // Reserve 1000, minimum 0
               precision={2}
               valueStyle={{ color: '#fff', fontSize: '28px', fontWeight: 'bold' }}
               prefix={<SwapOutlined />}
