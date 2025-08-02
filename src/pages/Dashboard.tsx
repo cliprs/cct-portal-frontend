@@ -16,7 +16,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
+import { useAppSelector, useAppDispatch } from '../store';
 import { setSummary } from '../store/slices/kycSlice';
 import kycApiService from '../services/kycApi';
 
@@ -27,11 +27,10 @@ const Dashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { financialSummary } = useAppSelector((state) => state.user);
   const { summary: kycSummary } = useAppSelector((state) => state.kyc);
-  const { token } = useAppSelector((state) => state.auth);
+  const { token, user } = useAppSelector((state) => state.auth);
 
+  // 🔧 Load real user data instead of mock data
   useEffect(() => {
-    dispatch(loadMockData());
-    
     // Load real KYC data if authenticated
     if (token) {
       loadKycData();
@@ -39,16 +38,16 @@ const Dashboard: React.FC = () => {
   }, [dispatch, token]);
 
   const loadKycData = async () => {
- //   try {
-   //   const summary = await kycApiService.getKycSummary();
-     // dispatch(setSummary(summary));
-    }// catch (error) {
-     // console.error('Failed to load KYC summary:', error);
-      // Don't show error message, just continue with mock data
-   // }
- // };
+    try {
+      const summary = await kycApiService.getKycSummary();
+      dispatch(setSummary(summary));
+    } catch (error) {
+      console.error('Failed to load KYC summary:', error);
+      // Don't show error message, just continue with default data
+    }
+  };
 
-  // Mock data for recent transactions
+  // Mock data for recent transactions - TODO: Replace with real API
   const recentTransactions = [
     {
       id: '1',
@@ -76,7 +75,7 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  // Mock data for trading accounts
+  // Mock data for trading accounts - TODO: Replace with real API
   const tradingAccounts = [
     {
       id: '1',
@@ -205,12 +204,18 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // 🔧 Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return 'Guest User';
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User';
+  };
+
   return (
     <div>
       {/* Header with KYC Status */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <Title level={2} style={{ marginBottom: 0, color: '#27408b' }}>
-          My CCT Dashboard
+          {user ? `${getUserDisplayName()}'s Dashboard` : 'My CCT Dashboard'}
         </Title>
         
         {/* KYC Status Widget */}
@@ -224,7 +229,7 @@ const Dashboard: React.FC = () => {
             transition: 'all 0.3s ease',
             minWidth: '200px'
           }}
-styles={{ body: { padding: '12px 16px' } }}
+          styles={{ body: { padding: '12px 16px' } }}
           onClick={handleKycClick}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)';
@@ -376,7 +381,7 @@ styles={{ body: { padding: '12px 16px' } }}
                 <DollarOutlined style={{ color: 'rgba(255,255,255,0.8)', fontSize: '20px' }} />
               </div>
               <Title level={3} style={{ color: 'white', margin: 0 }}>
-                ${financialSummary?.equity?.toLocaleString() || '15,000'}
+                ${financialSummary?.equity?.toLocaleString() || '0'}
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
                 Total invested capital
@@ -402,7 +407,7 @@ styles={{ body: { padding: '12px 16px' } }}
                 <RiseOutlined style={{ color: 'rgba(255,255,255,0.8)', fontSize: '20px' }} />
               </div>
               <Title level={3} style={{ color: 'white', margin: 0 }}>
-                {financialSummary?.totalProfit >= 0 ? '+' : ''}${financialSummary?.totalProfit?.toLocaleString() || '2,500'}
+                {financialSummary?.totalProfit >= 0 ? '+' : ''}${financialSummary?.totalProfit?.toLocaleString() || '0'}
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
                 Profit & Loss summary
@@ -426,7 +431,7 @@ styles={{ body: { padding: '12px 16px' } }}
                 <BankOutlined style={{ color: 'rgba(255,255,255,0.8)', fontSize: '20px' }} />
               </div>
               <Title level={3} style={{ color: 'white', margin: 0 }}>
-                ${financialSummary?.balance?.toLocaleString() || '17,500'}
+                ${financialSummary?.balance?.toLocaleString() || '0'}
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
                 Total account balance
@@ -450,7 +455,7 @@ styles={{ body: { padding: '12px 16px' } }}
                 <WalletOutlined style={{ color: 'rgba(0,0,0,0.7)', fontSize: '20px' }} />
               </div>
               <Title level={3} style={{ color: '#333', margin: 0 }}>
-                ${financialSummary?.wallet?.toLocaleString() || '1,200'}
+                ${financialSummary?.wallet?.toLocaleString() || '0'}
               </Title>
               <Text style={{ color: 'rgba(0,0,0,0.6)', fontSize: '12px' }}>
                 Available for withdrawal
