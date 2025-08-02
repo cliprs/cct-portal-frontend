@@ -1,10 +1,10 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import kycReducer from './slices/kycSlice';
 import authReducer from './slices/authSlice';
 import userReducer from './slices/userSlice';
 
-// ✅ Enhanced Accounts Slice with Full Functionality
+// ✅ TradingAccount interface
 export interface TradingAccount {
   id: string;
   accountNumber: string;
@@ -19,8 +19,7 @@ export interface TradingAccount {
   isIslamic: boolean;
 }
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
+// ✅ Accounts Slice
 const accountsSlice = createSlice({
   name: 'accounts',
   initialState: {
@@ -71,6 +70,7 @@ const accountsSlice = createSlice({
   }
 });
 
+// ✅ Transactions Slice
 const transactionsSlice = createSlice({
   name: 'transactions',
   initialState: {
@@ -81,6 +81,7 @@ const transactionsSlice = createSlice({
   reducers: {}
 });
 
+// ✅ Notifications Slice
 const notificationsSlice = createSlice({
   name: 'notifications',
   initialState: {
@@ -91,11 +92,11 @@ const notificationsSlice = createSlice({
   reducers: {}
 });
 
-// 🔧 Store configuration with ALL REAL slices
+// ✅ Store configuration
 export const store = configureStore({
   reducer: {
-    auth: authReducer,     // 🔧 Real auth reducer
-    user: userReducer,     // 🔧 Real user reducer (not demo!)
+    auth: authReducer,
+    user: userReducer,
     accounts: accountsSlice.reducer,
     transactions: transactionsSlice.reducer,
     notifications: notificationsSlice.reducer,
@@ -112,11 +113,11 @@ export const store = configureStore({
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-// Typed hooks
+// ✅ Typed hooks
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
-// ✅ Export accounts actions only
+// ✅ Export accounts actions
 export const {
   setLoading,
   setError,
@@ -128,5 +129,3 @@ export const {
   updateAccountBalance,
   clearAccountsData,
 } = accountsSlice.actions;
-
-// 🔧 loadMockData export REMOVED!
