@@ -34,57 +34,55 @@ const Login: React.FC = () => {
         password: values.password,
       });
 
-      if (response.success && response.data) {
-        // Debug: Log response structure
-        console.log('🔍 Login response:', response.data);
-        
-        // Type assertion for backend response
-        const authData = response.data as any;
-        
-        // Ensure tokens exist before proceeding
-        if (!authData.tokens?.accessToken || !authData.user) {
-          throw new Error('Invalid login response - missing required data');
-        }
+      console.log('🔍 Raw response:', response);
 
+      // ✅ Type assertion for backend login response
+      const loginResponse = response as any;
+
+      // ✅ Handle backend response format directly
+      if (loginResponse.success && loginResponse.user && loginResponse.token) {
+        // Backend sends: { success: true, user: {...}, token: '...', refreshToken: '...' }
+        
         // Save tokens to localStorage
-        localStorage.setItem('accessToken', authData.tokens.accessToken);
-        if (authData.tokens.refreshToken) {
-          localStorage.setItem('refreshToken', authData.tokens.refreshToken);
+        localStorage.setItem('accessToken', loginResponse.token);
+        if (loginResponse.refreshToken) {
+          localStorage.setItem('refreshToken', loginResponse.refreshToken);
         }
 
-        // Update Redux store - no fallback data, must be real
+        // Update Redux store with actual backend data
         dispatch(loginSuccess({
-          user: authData.user,
-          token: authData.tokens.accessToken
+          user: loginResponse.user,
+          token: loginResponse.token
         }));
 
-        console.log('✅ Login successful, redirecting...');
+        console.log('✅ Login successful for user:', loginResponse.user.email);
+        console.log('✅ User role:', loginResponse.user.role);
         
-        // Redirect to dashboard
-        navigate('/dashboard');
+        // Check if user is admin/superadmin
+        if (loginResponse.user.role === 'SUPERADMIN' || loginResponse.user.role === 'ADMIN') {
+          console.log('🔧 Admin user detected, redirecting to admin dashboard');
+          navigate('/admin/dashboard');
+        } else {
+          console.log('👤 Regular user, redirecting to user dashboard');
+          navigate('/dashboard');
+        }
         
-        // Reload to ensure fresh state
-        window.location.reload();
+        // ✅ REMOVED: No window.location.reload() to prevent state loss
+        
       } else {
-        throw new Error(response.message || 'Login failed');
+        throw new Error('Invalid login response format');
       }
     } catch (error: any) {
       console.error('❌ Login error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
       
       let errorMessage = 'Login failed. Please check your credentials.';
       
-      if (error.status === 400) {
+      // Handle different error types
+      if (error.response?.status === 400 || error.response?.status === 401) {
         errorMessage = 'Invalid email or password.';
-      } else if (error.status === 401) {
-        errorMessage = 'Invalid credentials. Please check your email and password.';
-      } else if (error.status === 500) {
+      } else if (error.response?.status === 500) {
         errorMessage = 'Server error. Please try again later.';
-      } else if (error.message) {
+      } else if (error.message && error.message !== 'Invalid login response format') {
         errorMessage = error.message;
       }
       
@@ -217,6 +215,9 @@ const Login: React.FC = () => {
               <Link to="/register" style={{ color: '#27408b', fontWeight: '500' }}>
                 Create Account
               </Link>
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              Admin? Use your SuperAdmin credentials
             </Text>
           </Space>
         </div>
