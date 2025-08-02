@@ -42,7 +42,7 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    dispatch(loadMockData());
+    
   }, [dispatch]);
 
   useEffect(() => {
