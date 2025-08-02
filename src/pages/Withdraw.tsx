@@ -29,8 +29,7 @@ import {
   ExclamationCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
-
+import { useAppSelector, useAppDispatch } from '../store';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -56,7 +55,7 @@ const Withdraw: React.FC = () => {
 
   // Mock withdrawal addresses (max 3)
   useEffect(() => {
-    dispatch(loadMockData());
+    
     setWithdrawAddresses([
       {
         id: '1',

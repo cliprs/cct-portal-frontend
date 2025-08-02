@@ -28,8 +28,7 @@ import {
   ExclamationCircleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
-import dayjs from 'dayjs';
+import { useAppSelector, useAppDispatch } from '../store';import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -63,7 +62,7 @@ const History: React.FC = () => {
 
   // Mock transaction data
   useEffect(() => {
-    dispatch(loadMockData());
+   
     
     const mockTransactions: Transaction[] = [
       {

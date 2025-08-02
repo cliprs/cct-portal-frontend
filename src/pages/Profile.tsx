@@ -29,8 +29,7 @@ import {
   WalletOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
-
+import { useAppSelector, useAppDispatch } from '../store';
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 

@@ -22,7 +22,7 @@ import {
   CopyOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
+import { useAppSelector, useAppDispatch } from '../store';
 
 const { Title, Text } = Typography;
 
@@ -47,7 +47,7 @@ const Deposit: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    dispatch(loadMockData());
+   
   }, [dispatch]);
 
   const paymentMethods: PaymentMethod[] = [

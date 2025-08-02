@@ -25,8 +25,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { useAppSelector, useAppDispatch, loadMockData } from '../store';
-
+import { useAppSelector, useAppDispatch } from '../store';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -78,7 +77,7 @@ const Transfer: React.FC = () => {
   ]);
 
   useEffect(() => {
-    dispatch(loadMockData());
+  
   }, [dispatch]);
 
   const handleTabChange = (key: string) => {
