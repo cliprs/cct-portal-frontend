@@ -48,23 +48,21 @@ const Register: React.FC = () => {
         // Type assertion for backend response
         const authData = response.data as any;
 
-        // Save tokens to localStorage
-        if (authData.tokens?.accessToken) {
-          localStorage.setItem('accessToken', authData.tokens.accessToken);
+        // Validate required response data
+        if (!authData.tokens?.accessToken || !authData.user) {
+          throw new Error('Invalid registration response - missing required data');
         }
-        if (authData.tokens?.refreshToken) {
+
+        // Save tokens to localStorage
+        localStorage.setItem('accessToken', authData.tokens.accessToken);
+        if (authData.tokens.refreshToken) {
           localStorage.setItem('refreshToken', authData.tokens.refreshToken);
         }
 
-        // Update Redux store
+        // Update Redux store - no fallback data, must be real
         dispatch(loginSuccess({
-          user: authData.user || {
-            id: Date.now().toString(),
-            email: values.email,
-            firstName: values.firstName,
-            lastName: values.lastName
-          },
-          token: authData.tokens?.accessToken || 'mock-token'
+          user: authData.user,
+          token: authData.tokens.accessToken
         }));
 
         console.log('✅ Registration successful, redirecting...');
@@ -331,28 +329,13 @@ const Register: React.FC = () => {
           </Text>
         </Divider>
 
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ textAlign: 'center' }}>
           <Text type="secondary">
             Already have an account?{' '}
             <Link to="/login" style={{ color: '#27408b', fontWeight: '500' }}>
               Sign In
             </Link>
           </Text>
-        </div>
-
-        <div style={{ 
-          padding: '16px', 
-          background: '#f8f9fa', 
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            <strong>Password Examples (Strong):</strong><br />
-            MySecure2024!<br />
-            Trading#Pass9<br />
-            Financial$123<br />
-            <span style={{ color: '#ff4d4f' }}>❌ Avoid: Test123456, Password123, Qwerty123</span>
-          </div>
         </div>
       </Card>
     </div>

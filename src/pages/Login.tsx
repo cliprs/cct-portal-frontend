@@ -41,23 +41,21 @@ const Login: React.FC = () => {
         // Type assertion for backend response
         const authData = response.data as any;
         
-        // Save tokens to localStorage (check if exists)
-        if (authData.accessToken) {
-          localStorage.setItem('accessToken', authData.accessToken);
+        // Ensure tokens exist before proceeding
+        if (!authData.accessToken || !authData.user) {
+          throw new Error('Invalid login response - missing required data');
         }
+
+        // Save tokens to localStorage
+        localStorage.setItem('accessToken', authData.accessToken);
         if (authData.refreshToken) {
           localStorage.setItem('refreshToken', authData.refreshToken);
         }
 
-        // Update Redux store with fallback data
+        // Update Redux store - no fallback data, must be real
         dispatch(loginSuccess({
-          user: authData.user || {
-            id: 'user123',
-            email: values.email,
-            firstName: 'User',
-            lastName: 'Name'
-          },
-          token: authData.accessToken || 'mock-token'
+          user: authData.user,
+          token: authData.accessToken
         }));
 
         console.log('✅ Login successful, redirecting...');
@@ -221,20 +219,6 @@ const Login: React.FC = () => {
               </Link>
             </Text>
           </Space>
-        </div>
-
-        <div style={{ 
-          marginTop: '32px', 
-          padding: '16px', 
-          background: '#f8f9fa', 
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            <strong>Demo Credentials:</strong><br />
-            Email: test@example.com<br />
-            Password: Test123!
-          </Text>
         </div>
       </Card>
     </div>

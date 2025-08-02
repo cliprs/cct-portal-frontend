@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Card, Row, Col, Typography, Space, Tag, Button, Badge, Alert } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Card, Row, Col, Typography, Space, Tag, Button, Badge, Alert, Empty, Spin } from 'antd';
 import {
   DollarOutlined,
   RiseOutlined,
@@ -14,13 +14,33 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   WarningOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store';
 import { setSummary } from '../store/slices/kycSlice';
 import kycApiService from '../services/kycApi';
+import { apiService } from '../services/api';
 
 const { Title, Text } = Typography;
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  status: string;
+  date: string;
+  description: string;
+}
+
+interface TradingAccount {
+  id: string;
+  accountNumber: string;
+  platform: string;
+  balance: number;
+  type: string;
+  status: string;
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -29,84 +49,109 @@ const Dashboard: React.FC = () => {
   const { summary: kycSummary } = useAppSelector((state) => state.kyc);
   const { token, user } = useAppSelector((state) => state.auth);
 
-  // 🔧 Load real user data instead of mock data
+  // Real data state
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [tradingAccounts, setTradingAccounts] = useState<TradingAccount[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // Load real user data
   useEffect(() => {
-    // Load real KYC data if authenticated
     if (token) {
-      loadKycData();
+      loadRealData();
     }
   }, [dispatch, token]);
 
-  const loadKycData = async () => {
+  const loadRealData = async () => {
+    setDataLoading(true);
+    setDataError(null);
+
     try {
-      const summary = await kycApiService.getKycSummary();
-      dispatch(setSummary(summary));
+      // Load KYC data
+      const kycSummary = await kycApiService.getKycSummary();
+      dispatch(setSummary(kycSummary));
+
+      // Load recent transactions
+      await loadRecentTransactions();
+
+      // Load trading accounts
+      await loadTradingAccounts();
     } catch (error) {
-      console.error('Failed to load KYC summary:', error);
-      // Don't show error message, just continue with default data
+      console.error('Failed to load dashboard data:', error);
+      setDataError('Failed to load some dashboard data');
+    } finally {
+      setDataLoading(false);
     }
   };
 
-  // Mock data for recent transactions - TODO: Replace with real API
-  const recentTransactions = [
-    {
-      id: '1',
-      type: 'deposit',
-      amount: 5000,
-      status: 'completed',
-      date: '2024-01-15',
-      description: 'TRC20 Deposit',
-    },
-    {
-      id: '2',
-      type: 'withdraw',
-      amount: 2000,
-      status: 'pending',
-      date: '2024-01-14',
-      description: 'Bitcoin Withdrawal',
-    },
-    {
-      id: '3',
-      type: 'transfer',
-      amount: 1500,
-      status: 'completed',
-      date: '2024-01-13',
-      description: 'Internal Transfer',
-    },
-  ];
+  const loadRecentTransactions = async () => {
+    try {
+      const response = await apiService.get('/transactions/history?limit=5&sortBy=createdAt&sortOrder=desc');
+      
+      if (response.success && response.data) {
+        // Ensure data is an array
+        const transactionData = Array.isArray(response.data) ? response.data : [];
+        
+        // Transform backend data to frontend format
+        const transactions = transactionData.map((tx: any) => ({
+          id: tx.id,
+          type: tx.type?.toLowerCase() || 'unknown',
+          amount: Math.abs(tx.amount || 0),
+          status: tx.status?.toLowerCase() || 'unknown',
+          date: tx.createdAt || tx.date || new Date().toISOString().split('T')[0],
+          description: tx.description || `${tx.type} transaction`,
+        }));
+        
+        setRecentTransactions(transactions);
+      }
+    } catch (error) {
+      console.error('Failed to load recent transactions:', error);
+      // Keep empty array for no transactions
+      setRecentTransactions([]);
+    }
+  };
 
-  // Mock data for trading accounts - TODO: Replace with real API
-  const tradingAccounts = [
-    {
-      id: '1',
-      accountNumber: '1001234',
-      platform: 'MT4',
-      balance: 5000,
-      type: 'Standard',
-      status: 'active',
-    },
-    {
-      id: '2',
-      accountNumber: '1001235',
-      platform: 'MT5',
-      balance: 3500,
-      type: 'ECN',
-      status: 'active',
-    },
-    {
-      id: '3',
-      accountNumber: '1001236',
-      platform: 'MT4',
-      balance: 2000,
-      type: 'Standard',
-      status: 'active',
-    },
-  ];
+  const loadTradingAccounts = async () => {
+    try {
+      const response = await apiService.get('/accounts?limit=5&sortBy=createdAt&sortOrder=desc');
+      
+      if (response.success && response.data) {
+        // Handle both direct array and nested data structure with proper typing
+        let accountsData: any[] = [];
+        
+        if (Array.isArray(response.data)) {
+          accountsData = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          // Type assertion for nested object with accounts property
+          const dataWithAccounts = response.data as { accounts?: any[] };
+          if (Array.isArray(dataWithAccounts.accounts)) {
+            accountsData = dataWithAccounts.accounts;
+          }
+        }
+        
+        const accounts = accountsData.map((acc: any) => ({
+          id: acc.id,
+          accountNumber: acc.accountNumber || acc.login || `ACC-${acc.id}`,
+          platform: acc.platform || 'MT4',
+          balance: acc.balance || 0,
+          type: acc.accountType || acc.type || 'Standard',
+          status: acc.status || 'active',
+        }));
+        
+        setTradingAccounts(accounts);
+      }
+    } catch (error) {
+      console.error('Failed to load trading accounts:', error);
+      // Keep empty array for no accounts
+      setTradingAccounts([]);
+    }
+  };
 
   const getTransactionIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'deposit':
         return <PlusCircleOutlined style={{ color: '#52c41a' }} />;
+      case 'withdrawal':
       case 'withdraw':
         return <MinusCircleOutlined style={{ color: '#ff4d4f' }} />;
       case 'transfer':
@@ -120,9 +165,12 @@ const Dashboard: React.FC = () => {
     const statusConfig = {
       completed: { color: 'success', text: 'Completed' },
       pending: { color: 'processing', text: 'Pending' },
+      processing: { color: 'processing', text: 'Processing' },
       rejected: { color: 'error', text: 'Rejected' },
+      failed: { color: 'error', text: 'Failed' },
+      cancelled: { color: 'default', text: 'Cancelled' },
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || { color: 'default', text: status };
+    const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || { color: 'default', text: status };
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
@@ -204,10 +252,138 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // 🔧 Get user display name
+  // Get user display name
   const getUserDisplayName = () => {
     if (!user) return 'Guest User';
     return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User';
+  };
+
+  const renderRecentTransactions = () => {
+    if (dataLoading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (recentTransactions.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <InboxOutlined style={{ fontSize: '32px', color: '#d9d9d9', marginBottom: 8 }} />
+          <Text type="secondary">No recent transactions</Text>
+        </div>
+      );
+    }
+
+    return (
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {recentTransactions.map((transaction) => (
+          <div
+            key={transaction.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              borderBottom: '1px solid #f0f0f0',
+            }}
+          >
+            <Space>
+              {getTransactionIcon(transaction.type)}
+              <div>
+                <Text strong style={{ display: 'block', fontSize: '14px' }}>
+                  {transaction.description}
+                </Text>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {transaction.date}
+                </Text>
+              </div>
+            </Space>
+            <Space direction="vertical" align="end" size="small">
+              <Text strong style={{ fontSize: '14px' }}>
+                ${transaction.amount.toLocaleString()}
+              </Text>
+              {getStatusTag(transaction.status)}
+            </Space>
+          </div>
+        ))}
+      </Space>
+    );
+  };
+
+  const renderTradingAccounts = () => {
+    if (dataLoading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (tradingAccounts.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <BankOutlined style={{ fontSize: '32px', color: '#d9d9d9', marginBottom: 8 }} />
+          <Text type="secondary">No trading accounts</Text>
+          <br />
+          <Button 
+            type="primary" 
+            size="small" 
+            onClick={() => navigate('/accounts')}
+            style={{ marginTop: 8 }}
+          >
+            Create Account
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {tradingAccounts.map((account) => (
+          <div
+            key={account.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              borderBottom: '1px solid #f0f0f0',
+            }}
+          >
+            <Space>
+              <BankOutlined style={{ color: '#27408b', fontSize: '16px' }} />
+              <div>
+                <Space size="small">
+                  <Text strong style={{ fontSize: '14px' }}>
+                    {account.accountNumber}
+                  </Text>
+                  {getPlatformTag(account.platform)}
+                  {getAccountTypeTag(account.type)}
+                </Space>
+                <Text type="secondary" style={{ display: 'block', fontSize: '12px' }}>
+                  Status: {account.status}
+                </Text>
+              </div>
+            </Space>
+            <Space direction="vertical" align="end" size="small">
+              <Text strong style={{ fontSize: '14px' }}>
+                ${account.balance.toLocaleString()}
+              </Text>
+              <Button
+                type="text"
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => navigate('/accounts')}
+              >
+                View
+              </Button>
+            </Space>
+          </div>
+        ))}
+      </Space>
+    );
   };
 
   return (
@@ -478,38 +654,7 @@ const Dashboard: React.FC = () => {
             variant="outlined"
             style={{ borderRadius: '12px' }}
           >
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              {recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px 0',
-                    borderBottom: '1px solid #f0f0f0',
-                  }}
-                >
-                  <Space>
-                    {getTransactionIcon(transaction.type)}
-                    <div>
-                      <Text strong style={{ display: 'block', fontSize: '14px' }}>
-                        {transaction.description}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {transaction.date}
-                      </Text>
-                    </div>
-                  </Space>
-                  <Space direction="vertical" align="end" size="small">
-                    <Text strong style={{ fontSize: '14px' }}>
-                      ${transaction.amount.toLocaleString()}
-                    </Text>
-                    {getStatusTag(transaction.status)}
-                  </Space>
-                </div>
-              ))}
-            </Space>
+            {renderRecentTransactions()}
           </Card>
         </Col>
 
@@ -524,49 +669,7 @@ const Dashboard: React.FC = () => {
             variant="outlined"
             style={{ borderRadius: '12px' }}
           >
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              {tradingAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px 0',
-                    borderBottom: '1px solid #f0f0f0',
-                  }}
-                >
-                  <Space>
-                    <BankOutlined style={{ color: '#27408b', fontSize: '16px' }} />
-                    <div>
-                      <Space size="small">
-                        <Text strong style={{ fontSize: '14px' }}>
-                          {account.accountNumber}
-                        </Text>
-                        {getPlatformTag(account.platform)}
-                        {getAccountTypeTag(account.type)}
-                      </Space>
-                      <Text type="secondary" style={{ display: 'block', fontSize: '12px' }}>
-                        Status: Active
-                      </Text>
-                    </div>
-                  </Space>
-                  <Space direction="vertical" align="end" size="small">
-                    <Text strong style={{ fontSize: '14px' }}>
-                      ${account.balance.toLocaleString()}
-                    </Text>
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<EyeOutlined />}
-                      onClick={() => navigate('/accounts')}
-                    >
-                      View
-                    </Button>
-                  </Space>
-                </div>
-              ))}
-            </Space>
+            {renderTradingAccounts()}
           </Card>
         </Col>
       </Row>

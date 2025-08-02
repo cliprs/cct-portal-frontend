@@ -29,6 +29,26 @@ const checkStoredAuth = (): Partial<AuthState> => {
     const storedUser = localStorage.getItem('user');
     
     if (storedToken && storedUser) {
+      // Verify token is not expired
+      try {
+        const payload = JSON.parse(atob(storedToken.split('.')[1]));
+        const isExpired = Date.now() > payload.exp * 1000;
+        
+        if (isExpired) {
+          // Clean up expired tokens
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          return {};
+        }
+      } catch (tokenError) {
+        // Invalid token format, clean up
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        return {};
+      }
+      
       return {
         token: storedToken,
         user: JSON.parse(storedUser),
@@ -37,6 +57,10 @@ const checkStoredAuth = (): Partial<AuthState> => {
     }
   } catch (error) {
     console.warn('Failed to parse stored auth data:', error);
+    // Clean up corrupted data
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
   }
   
   return {};
@@ -60,14 +84,23 @@ const authSlice = createSlice({
       state.error = null;
     },
     loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      // Validate required data exists
+      if (!action.payload.user || !action.payload.token) {
+        console.error('❌ Login success called without required user or token data');
+        return;
+      }
+
       state.loading = false;
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.error = null;
       
+      // Save to localStorage
       localStorage.setItem('user', JSON.stringify(action.payload.user));
       localStorage.setItem('accessToken', action.payload.token);
+      
+      console.log('✅ Auth state updated successfully');
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
@@ -76,6 +109,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       
+      // Clean up storage
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -87,9 +121,12 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
       
+      // Clean up storage
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      
+      console.log('✅ User logged out successfully');
     },
     clearError: (state) => {
       state.error = null;
@@ -101,8 +138,10 @@ const authSlice = createSlice({
       }
     },
     refreshToken: (state, action: PayloadAction<string>) => {
-      state.token = action.payload;
-      localStorage.setItem('accessToken', action.payload);
+      if (action.payload) {
+        state.token = action.payload;
+        localStorage.setItem('accessToken', action.payload);
+      }
     }
   },
 });
