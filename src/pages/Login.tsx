@@ -42,20 +42,20 @@ const Login: React.FC = () => {
         const authData = response.data as any;
         
         // Ensure tokens exist before proceeding
-        if (!authData.accessToken || !authData.user) {
+        if (!authData.tokens?.accessToken || !authData.user) {
           throw new Error('Invalid login response - missing required data');
         }
 
         // Save tokens to localStorage
-        localStorage.setItem('accessToken', authData.accessToken);
-        if (authData.refreshToken) {
-          localStorage.setItem('refreshToken', authData.refreshToken);
+        localStorage.setItem('accessToken', authData.tokens.accessToken);
+        if (authData.tokens.refreshToken) {
+          localStorage.setItem('refreshToken', authData.tokens.refreshToken);
         }
 
         // Update Redux store - no fallback data, must be real
         dispatch(loginSuccess({
           user: authData.user,
-          token: authData.accessToken
+          token: authData.tokens.accessToken
         }));
 
         console.log('✅ Login successful, redirecting...');
