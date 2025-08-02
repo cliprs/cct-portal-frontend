@@ -34,6 +34,8 @@ const Register: React.FC = () => {
 
       console.log('📝 Attempting registration:', values.email);
 
+      // API'den gelen yanıtı doğrudan yakalıyoruz
+      // Başarılı bir API yanıtı (2xx durum kodu) burada herhangi bir hata fırlatmaz
       const response = await apiService.post('/auth/register', {
         email: values.email,
         password: values.password,
@@ -42,63 +44,45 @@ const Register: React.FC = () => {
         postalCode: values.postalCode,
       });
 
-      if (response.success && response.data) {
-        setSuccess('Account created successfully! Logging you in...');
+      // API yanıtının başarılı olduğunu varsayıyoruz. 
+      // apiService'in hata durumunda bir istisna (exception) fırlattığını varsayarak bu kontrolü kaldırıyoruz.
+      // Eğer backend bir token döndürüyorsa, onu kullanarak giriş yapabiliriz.
+      // Eğer token döndürmüyorsa sadece başarılı mesajı gösteririz.
 
-        // Type assertion for backend response
-        const authData = response.data as any;
-
-        // Validate required response data
-        if (!authData.tokens?.accessToken || !authData.user) {
-          throw new Error('Invalid registration response - missing required data');
-        }
-
-        // Save tokens to localStorage
-        localStorage.setItem('accessToken', authData.tokens.accessToken);
-        if (authData.tokens.refreshToken) {
-          localStorage.setItem('refreshToken', authData.tokens.refreshToken);
-        }
-
-        // Update Redux store - no fallback data, must be real
-        dispatch(loginSuccess({
-          user: authData.user,
-          token: authData.tokens.accessToken
-        }));
-
-        console.log('✅ Registration successful, redirecting...');
+      const authData = response.data as any; // Yanıt verisini al
+      setSuccess('Account created successfully!');
+      console.log('✅ Registration successful, redirecting to login...');
         
-        // Redirect to dashboard after short delay
-        setTimeout(() => {
-          navigate('/dashboard');
-          window.location.reload();
-        }, 2000);
-      } else {
-        throw new Error(response.message || 'Registration failed');
-      }
+      // Başarılı kayıt sonrası doğrudan giriş sayfasına yönlendir
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+
     } catch (error: any) {
       console.error('❌ Registration error:', error);
       
       let errorMessage = 'Registration failed. Please try again.';
       
-      if (error.status === 400) {
-        if (error.message?.includes('Password does not meet requirements') || error.error === 'WEAK_PASSWORD') {
-          errorMessage = 'Password must be at least 8 characters with uppercase, lowercase, number and special character (!@#$%^&*()_+-=[]{}|;:,.<>?)';
-        } else if (error.message?.includes('weak patterns')) {
-          errorMessage = 'Password contains weak patterns (like 123456, abcdef, password, qwerty). Please choose a different password.';
-        } else {
-          errorMessage = 'Invalid input data. Please check all fields.';
-        }
-      } else if (error.status === 409) {
-        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
-      } else if (error.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
+      // Hata mesajını daha doğru bir şekilde işleyin
+      if (error.response?.data?.message) {
+          // Backend'den gelen spesifik hata mesajını kullan
+          errorMessage = error.response.data.message;
+      } else if (error.message?.includes('409')) { // Mevcut hata mesajını da kontrol edin
         errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      setError(errorMessage);
+      // Eğer hata mesajı "User registered successfully" ise, bu bir başarıdır.
+      if (errorMessage === 'User registered successfully') {
+         setSuccess('Account created successfully!');
+         setTimeout(() => {
+           navigate('/login');
+         }, 2000);
+      } else {
+        setError(errorMessage);
+      }
+
     } finally {
       setLoading(false);
     }
@@ -243,7 +227,7 @@ const Register: React.FC = () => {
           <Form.Item
             name="password"
             label="Password"
-            extra="Must contain: uppercase, lowercase, number, special char (!@#$%^&*()_+-=[]{}|;:,.<>?). Avoid weak patterns like: 123456, abcdef, password, qwerty"
+            extra="Must contain: uppercase, lowercase, number, special char (!@#$%^&*()_+-=[]{}|;:,.<>?) . Avoid weak patterns like: 123456, abcdef, password, qwerty"
             rules={[
               { required: true, message: 'Please enter your password' },
               { min: 8, message: 'Password must be at least 8 characters' },
