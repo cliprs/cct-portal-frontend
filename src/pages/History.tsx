@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { useAppSelector, useAppDispatch } from '../store';
 import dayjs from 'dayjs';
+import { getTransactionHistory } from '../services/transactionsApi';
 import api from '../services/api';
 
 const { Title, Text } = Typography;
@@ -111,28 +112,27 @@ const History: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
-  const fetchTransactionHistory = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.get<ApiResponse<Transaction[]>>('/transactions/history');
-      const responseData = response.data as ApiResponse<Transaction[]>;
-      
-      if (responseData.success) {
-        setTransactions(responseData.data || []);
-      } else {
-        setError(responseData.message || 'Failed to load transactions');
-      }
-    } catch (err: any) {
-      console.error('Transaction history error:', err);
-      setError(err.response?.data?.message || 'Failed to load transaction history');
-      setTransactions([]); // Set empty array on error
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchTransactionHistory = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const responseData = await getTransactionHistory();
+    
+    if (responseData && responseData.success) {
+  setTransactions(responseData.data || []);
+} else {
+  setError(responseData?.message || 'Failed to load transactions');
+}
 
+  } catch (err: any) {
+    console.error('Transaction history error:', err);
+    setError(err.response?.data?.message || 'Failed to load transaction history');
+    setTransactions([]);
+  } finally {
+    setLoading(false);
+  }
+};
   // Filter transactions based on search criteria
   useEffect(() => {
     let filtered = transactions || [];
